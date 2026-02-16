@@ -1,4 +1,21 @@
 // src/app/login/page.tsx
+"use client";
+
+// ========================================
+// インポート
+// ========================================
+
+import { useState } from "react";
+// → useState: コンポーネント内で変化する値を管理
+//   例: メールアドレス、パスワード、エラーメッセージなど
+
+import { useRouter } from "next/navigation";
+// → useRouter: ページ遷移に使う
+//   例: ログイン成功後にメインページへ移動
+
+import { createClient } from "@/lib/supabase/client";
+// → Supabase クライアント
+//   認証処理に使う
 
 // ========================================
 // ログインページ（UIのみ）
@@ -6,6 +23,84 @@
 // 認証機能は Day2 で実装します
 
 export default function LoginPage() {
+  // ========================================
+  // State（状態）の定義
+  // ========================================
+
+  const [email, setEmail] = useState("");
+  // → メールアドレスの入力値を保持
+
+  const [password, setPassword] = useState("");
+  // → パスワードの入力値を保持
+
+  const [isLogin, setIsLogin] = useState(true);
+  // → true: ログイン / false: 新規登録
+
+  const [error, setError] = useState("");
+  // → エラーメッセージを保持
+
+  const [loading, setLoading] = useState(false);
+  // → 処理中かどうか（ボタンの無効化に使う）
+
+  // ========================================
+  // Hooks（フック）の初期化
+  // ========================================
+
+  const router = useRouter();
+  // → ページ遷移用
+
+  const supabase = createClient();
+  // → Supabase クライアント
+
+  // ========================================
+  // 認証処理
+  // ========================================
+
+  const handleAuth = async (e: React.FormEvent) => {
+    // フォームタグの送信の際にページがリロードされるのを防ぐ
+    e.preventDefault();
+
+    setError("");
+
+    setLoading(true);
+
+    try {
+      if (isLogin) {
+        // signInWithPassword: メール／パスワードでログイン supabaseの機能
+        // 成功するとCookieにトークンが保存される
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (error) throw error;
+
+        // ログイン成功 →トップページへ
+        router.push("/");
+
+        // ページをリフレッシュして認証状態を反映
+        // これがないと古い状態が表示されることがある
+        router.refresh();
+      } else {
+        // ========================================
+        // 新規登録処理
+        // ========================================
+        // → signUp: メール/パスワードで新規登録 supabaseの機能です！注意！
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+        });
+        if (error) throw error;
+
+        router.push("/");
+        router.refresh();
+      }
+    } catch (err) {
+      setError("認証に失敗しました。もう一度お試しください。");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center">
       <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 w-full max-w-md border border-white/10">
@@ -16,22 +111,46 @@ export default function LoginPage() {
 
         {/* タブ切り替え（見た目のみ） */}
         <div className="flex mb-6">
-          <button className="flex-1 py-2 text-center text-white border-b-2 border-purple-500">
+          <button
+            onClick={() => setIsLogin(true)}
+            className={`flex-1 py-2 text-center transition${
+              isLogin
+                ? "text-white border-b-2 border-purple-500"
+                : "text-white/50 border-b border-white/10"
+            }`}
+          >
             ログイン
           </button>
-          <button className="flex-1 py-2 text-center text-white/50 border-b border-white/10">
+          <button
+            onClick={() => setIsLogin(false)}
+            className={`flex-1 py-2 text-center transition${
+              !isLogin
+                ? "text-white border-b-2 border-purple-500"
+                : "text-white/50 border-b border-white/10"
+            }`}
+          >
             新規登録
           </button>
         </div>
 
+        {/* エラーメッセージ */}
+        {error && (
+          <div className="bg-red-500/20 border border-red-500/50 text-red-200 px-4 py-3 rounded-lg mb-4">
+            {error}
+          </div>
+        )}
+
         {/* フォーム（見た目のみ） */}
-        <form className="space-y-4">
+        <form onSubmit={handleAuth} className="space-y-4">
           <div>
             <label className="block text-white/70 text-sm mb-2">
               メールアドレス
             </label>
             <input
               type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
               className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-purple-500 transition"
               placeholder="example@email.com"
             />
@@ -43,16 +162,21 @@ export default function LoginPage() {
             </label>
             <input
               type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              minLength={6}
               className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-purple-500 transition"
               placeholder="6文字以上"
             />
           </div>
 
           <button
-            type="button"
-            className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold py-3 rounded-lg transition-all"
+            type="submit"
+            disabled={loading}
+            className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-lg transition-all"
           >
-            ログイン
+            {loading ? "処理中..." : isLogin ? "ログイン" : "新規登録"}
           </button>
         </form>
       </div>
