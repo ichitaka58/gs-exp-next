@@ -1,9 +1,8 @@
 // src/types/index.ts
 
 // ========================================
-// 投稿の型定義
+// 投稿の型定義（更新）
 // ========================================
-// この型は Day2 以降で API と連携するときに使います
 
 export type Post = {
   id: number;
@@ -12,8 +11,12 @@ export type Post = {
   userId: string | null;
   createdAt: string;
   updatedAt: string;
-  likeCount: number;
-  isLiked: boolean;
+
+  // ========================================
+  // 追加: いいね関連
+  // ========================================
+  likeCount: number;   // いいね数
+  isLiked: boolean;    // ログインユーザーがいいねしているか
 };
 
 // ========================================

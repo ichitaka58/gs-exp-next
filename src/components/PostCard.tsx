@@ -30,6 +30,10 @@ type PostCardProps = {
   // → API から取得した投稿データ
   onDelete?: (id: number) => void;
   // → 削除処理を親から受け取る
+  onLike?: (id: number, isLiked: boolean) => void;
+  // → いいね処理を親から受け取る
+  isAnimating?: boolean;
+  // → いいねアニメーション中かどうか
   formatDate?: (dateString: string) => string;
   // → 日付フォーマット関数を親から受け取る
 };
@@ -37,6 +41,8 @@ type PostCardProps = {
 export default function PostCard({
   post,
   onDelete,
+  onLike,
+  isAnimating = false,
   formatDate,
 }: PostCardProps) {
   // デフォルトの日付フォーマット
@@ -85,7 +91,7 @@ export default function PostCard({
 
       {/* 画像 */}
       {post.imageUrl && (
-        <div className="rounded-xl overflow-hidden">
+        <div className="mb-4 rounded-xl overflow-hidden">
           <img
             src={post.imageUrl}
             alt=""
@@ -93,6 +99,19 @@ export default function PostCard({
           />
         </div>
       )}
+
+      {/* アクション（いいねボタン） */}
+      <div className="flex items-center gap-6 pt-3 border-t border-white/10">
+        <button
+          onClick={() => onLike?.(post.id, post.isLiked)}
+          className={`flex items-center gap-2 transition-all ${
+            post.isLiked ? "text-pink-500" : "text-white/50 hover:text-pink-500"
+          } ${isAnimating ? "heart-animation" : ""}`}
+        >
+          <span className="text-xl">{post.isLiked ? "❤️" : "🤍"}</span>
+          <span className="font-medium">{post.likeCount}</span>
+        </button>
+      </div>
     </article>
   );
 }
