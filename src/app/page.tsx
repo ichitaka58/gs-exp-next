@@ -24,11 +24,16 @@ import type { Post } from "@/types";
 import type { User } from "@supabase/supabase-js";
 // → Supabase のユーザー型
 
+// --- Day4 追加 ここから ---
+import { getPosts, createPost, deletePost, addLike, removeLike } from "@/lib/api";
+// → API クライアントをインポート
+// --- Day4 追加 ここまで ---
+
 // ========================================
 // 環境変数から API URL を取得
 // ========================================
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8888";
+// const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8888";
 // → 環境変数がなければデフォルト値を使う
 
 // ========================================
@@ -42,47 +47,47 @@ import PostCard from "@/components/PostCard";
 import { SamplePost } from "@/types";
 
 // サンプルデータ（Day2 で API から取得するように変更）
-const samplePosts: SamplePost[] = [
-  {
-    id: 1,
-    username: "tanaka",
-    content: "今日はプログラミング日和！React楽しい 🚀",
-    image:
-      "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=600&h=400&fit=crop",
-    likes: 24,
-    isLiked: false,
-    createdAt: "5分前",
-  },
-  {
-    id: 2,
-    username: "suzuki",
-    content: "カフェでコーディング中 ☕️\n集中できていい感じ！",
-    image:
-      "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=600&h=400&fit=crop",
-    likes: 18,
-    isLiked: true,
-    createdAt: "30分前",
-  },
-  {
-    id: 3,
-    username: "yamada",
-    content: "Next.js の新機能試してみた。Server Actions 便利すぎる！",
-    image: null,
-    likes: 42,
-    isLiked: false,
-    createdAt: "1時間前",
-  },
-  {
-    id: 4,
-    username: "sato",
-    content: "今日のランチ 🍜",
-    image:
-      "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=600&h=400&fit=crop",
-    likes: 8,
-    isLiked: false,
-    createdAt: "2時間前",
-  },
-];
+// const samplePosts: SamplePost[] = [
+//   {
+//     id: 1,
+//     username: "tanaka",
+//     content: "今日はプログラミング日和！React楽しい 🚀",
+//     image:
+//       "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=600&h=400&fit=crop",
+//     likes: 24,
+//     isLiked: false,
+//     createdAt: "5分前",
+//   },
+//   {
+//     id: 2,
+//     username: "suzuki",
+//     content: "カフェでコーディング中 ☕️\n集中できていい感じ！",
+//     image:
+//       "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=600&h=400&fit=crop",
+//     likes: 18,
+//     isLiked: true,
+//     createdAt: "30分前",
+//   },
+//   {
+//     id: 3,
+//     username: "yamada",
+//     content: "Next.js の新機能試してみた。Server Actions 便利すぎる！",
+//     image: null,
+//     likes: 42,
+//     isLiked: false,
+//     createdAt: "1時間前",
+//   },
+//   {
+//     id: 4,
+//     username: "sato",
+//     content: "今日のランチ 🍜",
+//     image:
+//       "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=600&h=400&fit=crop",
+//     likes: 8,
+//     isLiked: false,
+//     createdAt: "2時間前",
+//   },
+// ];
 
 export default function Home() {
   // ========================================
@@ -134,12 +139,13 @@ export default function Home() {
   const fetchPosts = async (userId?: string) => {
     try {
       // userId をクエリパラメータで送る
-      const url = userId
-        ? `${API_URL}/api/posts?userId=${userId}`
-        : `${API_URL}/api/posts`;
+      // const url = userId
+      //   ? `${API_URL}/api/posts?userId=${userId}`
+      //   : `${API_URL}/api/posts`;
 
-      const response = await fetch(url);
-      const data = await response.json();
+      // const response = await fetch(url);
+      // const data = await response.json();
+      const data = await getPosts(userId);
       setPosts(data);
     } catch (error) {
       console.error("Error fetching posts:", error);
@@ -198,21 +204,28 @@ export default function Home() {
         }
       }
 
-      const response = await fetch(`${API_URL}/api/posts`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          content: newPost,
-          imageUrl,
-          userId: user?.id,
-        }),
-      });
+      // const response = await fetch(`${API_URL}/api/posts`, {
+      //   method: "POST",
+      //   headers: {
+      //     "Content-Type": "application/json",
+      //   },
+      //   body: JSON.stringify({
+      //     content: newPost,
+      //     imageUrl,
+      //     userId: user?.id,
+      //   }),
+      // });
 
-      if (!response.ok) {
-        throw new Error("投稿に失敗しました");
-      }
+      // if (!response.ok) {
+      //   throw new Error("投稿に失敗しました");
+      // }
+      // --- Day4 変更 ここから ---
+      await createPost({
+        content: newPost,
+        imageUrl,
+        userId: user.id,
+      });
+      // --- Day4 変更 ここまで ---
 
       setNewPost("");
       fetchPosts(user?.id);
@@ -231,13 +244,19 @@ export default function Home() {
     if (!confirm("この投稿を削除しますか？")) return;
 
     try {
-      const response = await fetch(`${API_URL}/api/posts/${id}`, {
-        method: "DELETE",
-      });
+      // const response = await fetch(`${API_URL}/api/posts/${id}`, {
+      //   method: "DELETE",
+      // });
 
-      if (!response.ok) {
-        throw new Error("削除に失敗しました");
-      }
+      // if (!response.ok) {
+      //   throw new Error("削除に失敗しました");
+      // }
+      
+      // --- Day4 変更 ここから ---
+      // Before: fetch() を使っていた
+      // After: API クライアントを使う
+      await deletePost(id);
+      // --- Day4 変更 ここまで ---
 
       fetchPosts();
     } catch (error) {
@@ -257,23 +276,31 @@ export default function Home() {
     setTimeout(() => setAnimatingId(null), 400);
 
     try {
-      const method = isLiked ? "DELETE" : "POST";
+      // const method = isLiked ? "DELETE" : "POST";
 
-      const response = await fetch(`${API_URL}/api/posts/${postId}/like`, {
-        method,
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          userId: user.id,
-        }),
-      });
+      // const response = await fetch(`${API_URL}/api/posts/${postId}/like`, {
+      //   method,
+      //   headers: {
+      //     "Content-Type": "application/json",
+      //   },
+      //   body: JSON.stringify({
+      //     userId: user.id,
+      //   }),
+      // });
 
-      if (!response.ok) {
-        throw new Error("いいねに失敗しました");
-      }
+      // if (!response.ok) {
+      //   throw new Error("いいねに失敗しました");
+      // }
 
-      const data = await response.json();
+      // const data = await response.json();
+
+      // --- Day4 変更 ここから ---
+      // Before: fetch() を使っていた
+      // After: API クライアントを使う
+      const data = isLiked
+        ? await removeLike(postId, user.id)
+        : await addLike(postId, user.id);
+      // --- Day4 変更 ここまで ---
 
       // 投稿一覧を更新（該当の投稿だけ更新）
       setPosts(
